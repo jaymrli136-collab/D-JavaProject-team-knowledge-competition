@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Atlas · 多项目知识 Agent</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">PA</div>
+      <div>
+        <strong>Project Atlas</strong>
+        <span>可信多项目知识 Agent Harness</span>
+      </div>
+    </div>
+    <div class="top-actions">
+      <label class="user-switch">
+        <span>当前身份</span>
+        <select id="user-select">
+          <option value="u_alice">u_alice · 项目成员</option>
+          <option value="u_bob">u_bob · 项目负责人</option>
+          <option value="u_carol">u_carol · 内容负责人</option>
+        </select>
+      </label>
+      <button class="icon-button" id="refresh-button" type="button" title="刷新项目">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="panel projects-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Knowledge scope</p>
+          <h2>项目范围</h2>
+        </div>
+        <button class="text-button" id="select-all-button" type="button">全选</button>
+      </div>
+      <div id="project-list" class="project-list"></div>
+
+      <section class="ingest-section">
+        <div class="section-title">
+          <h3>知识录入</h3>
+          <span>写入后立即可检索</span>
+        </div>
+        <form id="ingest-form" class="ingest-form">
+          <label>目标项目
+            <select id="ingest-project"></select>
+          </label>
+          <label>文档标题
+            <input id="ingest-title" required maxlength="80" placeholder="例如：十二月投放复盘">
+          </label>
+          <label>来源 URI
+            <input id="ingest-source" required value="https://docs.example.com/manual-entry">
+          </label>
+          <label>生效日期
+            <input id="ingest-date" type="date" required>
+          </label>
+          <label>正文
+            <textarea id="ingest-content" required rows="5" placeholder="# 结论&#10;这里填写 Markdown 内容"></textarea>
+          </label>
+          <button class="primary-button" type="submit">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            录入知识
+          </button>
+        </form>
+      </section>
+    </aside>
+
+    <section class="panel chat-panel">
+      <div class="chat-head">
+        <div>
+          <p class="eyebrow">Agent harness</p>
+          <h1>跨项目提问，只回答有证据的内容</h1>
+        </div>
+        <span class="status-pill" id="scope-pill">等待选择项目</span>
+      </div>
+
+      <div id="chat-log" class="chat-log" aria-live="polite">
+        <article class="welcome">
+          <div class="welcome-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+          </div>
+          <h2>从真实项目问题开始</h2>
+          <p>系统会先锁定可访问项目，再检索 L0/L1/L2 上下文。每个结论都必须绑定原文证据。</p>
+          <div id="demo-prompts" class="prompt-grid"></div>
+        </article>
+      </div>
+
+      <form id="ask-form" class="composer">
+        <textarea id="question-input" rows="3" required placeholder="例如：比较番茄小说和红果短剧当前最大的风险"></textarea>
+        <div class="composer-actions">
+          <span>Enter 发送 · Shift + Enter 换行</span>
+          <button class="primary-button" id="ask-button" type="submit">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+            发送
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="panel evidence-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Trace & evidence</p>
+          <h2>证据与轨迹</h2>
+        </div>
+        <span id="run-badge" class="mono muted">尚无运行</span>
+      </div>
+      <div class="tabbar" role="tablist">
+        <button class="tab active" data-tab="evidence" type="button">证据</button>
+        <button class="tab" data-tab="trace" type="button">轨迹</button>
+      </div>
+      <div id="evidence-list" class="evidence-list empty-state">提问后在这里查看项目、文档、章节与有效期。</div>
+      <div id="trace-list" class="trace-list hidden"></div>
+    </aside>
+  </main>
+
+  <section class="evaluation-band">
+    <div class="evaluation-head">
+      <div>
+        <p class="eyebrow">Regression suite</p>
+        <h2>可信回答固定评测</h2>
+      </div>
+      <button class="secondary-button" id="evaluation-button" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+        运行评测
+      </button>
+    </div>
+    <div class="metrics" id="evaluation-metrics">
+      <div><strong>--</strong><span>通过率</span></div>
+      <div><strong>--</strong><span>引用覆盖</span></div>
+      <div><strong>--</strong><span>拒答准确率</span></div>
+      <div><strong>--</strong><span>权限违规</span></div>
+    </div>
+    <div id="evaluation-cases" class="evaluation-cases empty-state">运行固定任务，验证引用、拒答和权限隔离。</div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
