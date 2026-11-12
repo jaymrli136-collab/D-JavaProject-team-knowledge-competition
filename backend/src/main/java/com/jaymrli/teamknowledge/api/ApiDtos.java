@@ -1,6 +1,7 @@
 package com.jaymrli.teamknowledge.api;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
@@ -101,6 +102,36 @@ public final class ApiDtos {
             @NotNull(message = "effectiveDate must not be null") LocalDate effectiveDate,
             Integer version,
             Set<String> tags
+    ) {
+    }
+
+    public record MemoryProposalRequest(
+            @NotBlank(message = "projectId must not be blank") String projectId,
+            @NotBlank(message = "type must not be blank") String type,
+            @NotBlank(message = "title must not be blank") String title,
+            @NotBlank(message = "content must not be blank") String content,
+            @NotBlank(message = "sourceRunId must not be blank") String sourceRunId,
+            @NotEmpty(message = "evidenceIds must not be empty") List<String> evidenceIds
+    ) {
+    }
+
+    public record MemoryView(
+            String id,
+            String projectId,
+            String projectName,
+            String type,
+            String title,
+            String content,
+            String status,
+            double confidence,
+            String sourceRunId,
+            List<String> sourceEvidenceIds,
+            String createdBy,
+            Instant createdAt,
+            String confirmedBy,
+            Instant confirmedAt,
+            String retiredBy,
+            Instant retiredAt
     ) {
     }
 
