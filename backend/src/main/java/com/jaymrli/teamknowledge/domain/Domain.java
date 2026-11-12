@@ -17,6 +17,14 @@ public final class Domain {
         ANSWERED, ABSTAINED, FORBIDDEN
     }
 
+    public enum MemoryType {
+        DECISION, CONSTRAINT, RISK, OWNER, TERM, EXPERIENCE
+    }
+
+    public enum MemoryStatus {
+        PROPOSED, ACTIVE, RETIRED
+    }
+
     public record Project(
             String id,
             String name,
@@ -97,6 +105,25 @@ public final class Domain {
             List<String> citationIds,
             boolean abstained,
             double confidence
+    ) {
+    }
+
+    public record ProjectMemory(
+            String id,
+            String projectId,
+            MemoryType type,
+            String title,
+            String content,
+            MemoryStatus status,
+            double confidence,
+            String sourceRunId,
+            List<String> sourceEvidenceIds,
+            String createdBy,
+            Instant createdAt,
+            String confirmedBy,
+            Instant confirmedAt,
+            String retiredBy,
+            Instant retiredAt
     ) {
     }
 
