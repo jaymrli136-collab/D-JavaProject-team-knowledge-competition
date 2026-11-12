@@ -5,6 +5,8 @@ import com.jaymrli.teamknowledge.api.ApiDtos.AskResponse;
 import com.jaymrli.teamknowledge.api.ApiDtos.DocumentView;
 import com.jaymrli.teamknowledge.api.ApiDtos.EvaluationReport;
 import com.jaymrli.teamknowledge.api.ApiDtos.IngestDocumentRequest;
+import com.jaymrli.teamknowledge.api.ApiDtos.MemoryProposalRequest;
+import com.jaymrli.teamknowledge.api.ApiDtos.MemoryView;
 import com.jaymrli.teamknowledge.api.ApiDtos.ProjectView;
 import com.jaymrli.teamknowledge.domain.Domain.AgentRun;
 import com.jaymrli.teamknowledge.domain.Domain.KnowledgeDocument;
@@ -14,6 +16,7 @@ import com.jaymrli.teamknowledge.service.AccessControlService;
 import com.jaymrli.teamknowledge.service.DocumentIngestionService;
 import com.jaymrli.teamknowledge.service.EvaluationService;
 import com.jaymrli.teamknowledge.service.KnowledgeAgentHarness;
+import com.jaymrli.teamknowledge.service.ProjectMemoryService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -35,15 +39,17 @@ public class KnowledgeApiController {
     private final DocumentIngestionService ingestion;
     private final KnowledgeAgentHarness harness;
     private final EvaluationService evaluation;
+    private final ProjectMemoryService memoryService;
 
     public KnowledgeApiController(KnowledgeStore store, AccessControlService accessControl,
                                   DocumentIngestionService ingestion, KnowledgeAgentHarness harness,
-                                  EvaluationService evaluation) {
+                                  EvaluationService evaluation, ProjectMemoryService memoryService) {
         this.store = store;
         this.accessControl = accessControl;
         this.ingestion = ingestion;
         this.harness = harness;
         this.evaluation = evaluation;
+        this.memoryService = memoryService;
     }
 
     @GetMapping("/health")
@@ -91,6 +97,30 @@ public class KnowledgeApiController {
     public AgentRun run(@RequestHeader(value = "X-User-Id", defaultValue = "u_alice") String userId,
                         @PathVariable String runId) {
         return harness.getRun(userId, runId);
+    }
+
+    @GetMapping("/memories")
+    public List<MemoryView> memories(@RequestHeader(value = "X-User-Id", defaultValue = "u_alice") String userId,
+                                     @RequestParam(required = false) String projectId) {
+        return memoryService.listVisible(userId, projectId);
+    }
+
+    @PostMapping("/memories/propose")
+    public MemoryView proposeMemory(@RequestHeader(value = "X-User-Id", defaultValue = "u_alice") String userId,
+                                    @Valid @RequestBody MemoryProposalRequest request) {
+        return memoryService.propose(userId, request);
+    }
+
+    @PostMapping("/memories/{memoryId}/confirm")
+    public MemoryView confirmMemory(@RequestHeader(value = "X-User-Id", defaultValue = "u_alice") String userId,
+                                    @PathVariable String memoryId) {
+        return memoryService.confirm(userId, memoryId);
+    }
+
+    @PostMapping("/memories/{memoryId}/retire")
+    public MemoryView retireMemory(@RequestHeader(value = "X-User-Id", defaultValue = "u_alice") String userId,
+                                   @PathVariable String memoryId) {
+        return memoryService.retire(userId, memoryId);
     }
 
     @PostMapping("/evaluations/run")
