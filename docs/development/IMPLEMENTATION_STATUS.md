@@ -11,14 +11,15 @@
 - BM25 + 哈希向量混合召回、项目覆盖保障和轻量重排。
 - 显式 Agent Tool Router、RunState 轨迹、引用校验和时效冲突提示。
 - Session Memory 连续追问和项目范围继承。
+- 项目记忆治理：候选、确认、撤回，以及 AgentRun/evidenceId/项目 ACL 来源校验。
 - 固定评测集：事实、跨项目比较、决策、上线时间、无答案、越权。
 - 响应式原生前端：用户切换、项目选择、问答、证据、轨迹、知识录入和评测。
-- Spring Boot 集成测试与 Harness 单元测试。
+- Spring Boot 集成测试、Harness 单元测试和项目记忆治理测试。
 - D 盘 Maven 配置与启动脚本。
 
 ## 已执行验证
 
-- 使用 Java Parser 对 29 个 Java 源文件执行语法解析：0 个语法错误。
+- 使用 Java Parser 对 32 个 Java 源文件执行语法解析：0 个语法错误。
 - 使用 Node VM 对前端 app.js 执行语法解析：0 个语法错误。
 - 本地 Git 工作区提交完成，文件数与状态由提交记录确认。
 
