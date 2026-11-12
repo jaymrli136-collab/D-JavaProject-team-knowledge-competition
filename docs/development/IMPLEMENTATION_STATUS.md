@@ -14,7 +14,7 @@
 - 固定评测集：事实、跨项目比较、决策、上线时间、无答案、越权。
 - 响应式原生前端：用户切换、项目选择、问答、证据、轨迹、知识录入和评测。
 - Spring Boot 集成测试与 Harness 单元测试。
-- D 盘 Maven 配置、启动脚本和 GitHub Actions CI。
+- D 盘 Maven 配置与启动脚本。
 
 ## 已执行验证
 
@@ -30,4 +30,4 @@
 D:JavaProject	eam-knowledge-competitionscripts	est.ps1
 ```
 
-GitHub 推送需要可用的账户凭据；远程仓库当前为空。
+远程 `main` 分支已经通过 GitHub Contents API 推送，远程文件内容与本地工作区逐文件哈希一致。由于 OAuth Token 未授予 `workflow` scope，本次未提交 GitHub Actions 工作流。
