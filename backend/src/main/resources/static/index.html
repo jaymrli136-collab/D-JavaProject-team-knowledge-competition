@@ -113,9 +113,11 @@
       <div class="tabbar" role="tablist">
         <button class="tab active" data-tab="evidence" type="button">证据</button>
         <button class="tab" data-tab="trace" type="button">轨迹</button>
+        <button class="tab" data-tab="memory" type="button">记忆</button>
       </div>
       <div id="evidence-list" class="evidence-list empty-state">提问后在这里查看项目、文档、章节与有效期。</div>
       <div id="trace-list" class="trace-list hidden"></div>
+      <div id="memory-list" class="memory-list hidden empty-state">暂无项目记忆。回答完成后可沉淀候选记忆，由项目成员确认。</div>
     </aside>
   </main>
 
@@ -138,6 +140,24 @@
     </div>
     <div id="evaluation-cases" class="evaluation-cases empty-state">运行固定任务，验证引用、拒答和权限隔离。</div>
   </section>
+
+  <dialog id="memory-dialog" class="memory-dialog">
+    <form id="memory-form">
+      <div class="dialog-head">
+        <div><p class="eyebrow">Governed memory</p><h2>沉淀候选记忆</h2></div>
+        <button class="icon-button light" id="memory-close" type="button" title="关闭">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <p class="dialog-note">候选记忆必须绑定本次运行的原文证据。确认前不会进入项目记忆，撤回后也不再作为上下文。</p>
+      <label>项目<select id="memory-project" required></select></label>
+      <label>类型<select id="memory-type" required><option value="DECISION">决策</option><option value="CONSTRAINT">约束</option><option value="RISK">风险</option><option value="OWNER">负责人</option><option value="TERM">术语</option><option value="EXPERIENCE">经验</option></select></label>
+      <label>标题<input id="memory-title" required maxlength="100"></label>
+      <label>内容<textarea id="memory-content" required rows="5"></textarea></label>
+      <div id="memory-evidence" class="memory-evidence"></div>
+      <div class="dialog-actions"><button class="secondary-button" id="memory-cancel" type="button">取消</button><button class="primary-button" type="submit">提交候选记忆</button></div>
+    </form>
+  </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="/app.js"></script>
