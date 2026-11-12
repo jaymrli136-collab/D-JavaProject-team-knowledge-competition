@@ -3,7 +3,10 @@ const state = {
   projects: [],
   selected: new Set(),
   sessionId: null,
-  lastResponse: null
+  lastResponse: null,
+  memories: [],
+  memoryDraft: null,
+  lastQuestion: ''
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -17,11 +20,14 @@ const askButton = $('#ask-button');
 const evidenceList = $('#evidence-list');
 const traceList = $('#trace-list');
 const runBadge = $('#run-badge');
+const memoryList = $('#memory-list');
+const memoryDialog = $('#memory-dialog');
 
 function init() {
   const today = new Date().toISOString().slice(0, 10);
   $('#ingest-date').value = today;
   loadProjects();
+  loadMemories();
   loadDemoQuestions();
   bindEvents();
 }
@@ -33,6 +39,7 @@ function bindEvents() {
     state.sessionId = null;
     resetConversation();
     loadProjects();
+    loadMemories();
   });
   $('#refresh-button').addEventListener('click', loadProjects);
   $('#select-all-button').addEventListener('click', () => {
@@ -48,6 +55,10 @@ function bindEvents() {
   });
   $('#ingest-form').addEventListener('submit', ingestDocument);
   $('#evaluation-button').addEventListener('click', runEvaluation);
+  $('#memory-form').addEventListener('submit', submitMemory);
+  $('#memory-close').addEventListener('click', () => memoryDialog.close());
+  $('#memory-cancel').addEventListener('click', () => memoryDialog.close());
+  $('#memory-project').addEventListener('change', renderMemoryDraftEvidence);
   document.querySelectorAll('.tab').forEach(button => {
     button.addEventListener('click', () => switchTab(button.dataset.tab));
   });
@@ -159,6 +170,7 @@ async function askQuestion(event) {
   const question = questionInput.value.trim();
   if (!question) return;
   appendUserMessage(question);
+  state.lastQuestion = question;
   questionInput.value = '';
   askButton.disabled = true;
   askButton.textContent = '正在检索';
@@ -221,6 +233,14 @@ function appendAgentResponse(response) {
   const citations = document.createElement('span');
   citations.textContent = '引用 ' + (response.citations || []).length + ' 条';
   meta.append(status, confidence, citations);
+  if (response.status === 'ANSWERED' && (response.citations || []).length) {
+    const rememberButton = document.createElement('button');
+    rememberButton.type = 'button';
+    rememberButton.className = 'small-button';
+    rememberButton.textContent = '沉淀候选记忆';
+    rememberButton.addEventListener('click', () => openMemoryDialog(response));
+    meta.append(rememberButton);
+  }
   article.append(label, text, meta);
   chatLog.append(article);
   article.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -298,6 +318,8 @@ function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(button => button.classList.toggle('active', button.dataset.tab === tab));
   evidenceList.classList.toggle('hidden', tab !== 'evidence');
   traceList.classList.toggle('hidden', tab !== 'trace');
+  memoryList.classList.toggle('hidden', tab !== 'memory');
+  if (tab === 'memory') loadMemories();
 }
 
 async function runEvaluation() {
@@ -384,6 +406,156 @@ function showToast(message, error = false) {
   toast.classList.add('show');
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => toast.classList.remove('show'), 3200);
+}
+
+
+async function loadMemories() {
+  try {
+    state.memories = await api('/api/memories');
+    renderMemories();
+  } catch (error) {
+    showToast(error.message, true);
+  }
+}
+
+function renderMemories() {
+  memoryList.replaceChildren();
+  if (!state.memories.length) {
+    memoryList.classList.add('empty-state');
+    memoryList.textContent = '暂无项目记忆。回答完成后可沉淀候选记忆，由项目成员确认。';
+    return;
+  }
+  memoryList.classList.remove('empty-state');
+  state.memories.forEach(memory => {
+    const card = document.createElement('article');
+    card.className = 'memory-card';
+    const header = document.createElement('header');
+    const title = document.createElement('h4');
+    title.textContent = memory.title;
+    const badge = document.createElement('span');
+    badge.className = 'badge' + (memory.status === 'PROPOSED' ? ' warn' : memory.status === 'RETIRED' ? ' danger' : '');
+    badge.textContent = memory.status === 'PROPOSED' ? '待确认' : memory.status === 'ACTIVE' ? '已确认' : '已撤回';
+    header.append(title, badge);
+    const meta = document.createElement('div');
+    meta.className = 'evidence-meta';
+    [memory.projectName, memoryTypeLabel(memory.type), '来源 ' + memory.sourceEvidenceIds.join(',')].forEach(text => {
+      const span = document.createElement('span');
+      span.textContent = text;
+      meta.append(span);
+    });
+    const body = document.createElement('p');
+    body.textContent = memory.content;
+    const actions = document.createElement('div');
+    actions.className = 'memory-actions';
+    if (memory.status === 'PROPOSED') {
+      const confirm = document.createElement('button');
+      confirm.type = 'button';
+      confirm.className = 'small-button';
+      confirm.textContent = '确认启用';
+      confirm.addEventListener('click', () => updateMemory(memory.id, 'confirm'));
+      actions.append(confirm);
+    }
+    if (memory.status !== 'RETIRED') {
+      const retire = document.createElement('button');
+      retire.type = 'button';
+      retire.className = 'small-button danger';
+      retire.textContent = '撤回';
+      retire.addEventListener('click', () => updateMemory(memory.id, 'retire'));
+      actions.append(retire);
+    }
+    card.append(header, meta, body, actions);
+    memoryList.append(card);
+  });
+}
+
+async function updateMemory(memoryId, action) {
+  try {
+    await api('/api/memories/' + encodeURIComponent(memoryId) + '/' + action, { method: 'POST', body: '{}' });
+    showToast(action === 'confirm' ? '记忆已确认启用' : '记忆已撤回');
+    await loadMemories();
+  } catch (error) {
+    showToast(error.message, true);
+  }
+}
+
+function openMemoryDialog(response) {
+  state.memoryDraft = response;
+  const projectIds = Array.from(new Set((response.citations || []).map(item => item.projectId)));
+  const projectSelect = $('#memory-project');
+  projectSelect.replaceChildren();
+  projectIds.forEach(projectId => {
+    const citation = response.citations.find(item => item.projectId === projectId);
+    const option = document.createElement('option');
+    option.value = projectId;
+    option.textContent = citation ? citation.projectName : projectId;
+    projectSelect.append(option);
+  });
+  $('#memory-title').value = truncateText('回答事实：' + state.lastQuestion, 80);
+  $('#memory-content').value = truncateText(response.answer, 500);
+  $('#memory-type').value = 'DECISION';
+  renderMemoryDraftEvidence();
+  memoryDialog.showModal();
+}
+
+function renderMemoryDraftEvidence() {
+  const response = state.memoryDraft;
+  const projectId = $('#memory-project').value;
+  const container = $('#memory-evidence');
+  container.replaceChildren();
+  if (!response) return;
+  (response.citations || []).filter(item => item.projectId === projectId).forEach(item => {
+    const tag = document.createElement('span');
+    tag.textContent = '[' + item.evidenceId + '] ' + item.documentTitle + ' / ' + item.headingPath;
+    container.append(tag);
+  });
+}
+
+async function submitMemory(event) {
+  event.preventDefault();
+  const response = state.memoryDraft;
+  const projectId = $('#memory-project').value;
+  const evidenceIds = (response?.citations || [])
+      .filter(item => item.projectId === projectId)
+      .map(item => item.evidenceId);
+  if (!evidenceIds.length) {
+    showToast('当前项目没有可绑定的原文证据', true);
+    return;
+  }
+  try {
+    await api('/api/memories/propose', {
+      method: 'POST',
+      body: JSON.stringify({
+        projectId,
+        type: $('#memory-type').value,
+        title: $('#memory-title').value.trim(),
+        content: $('#memory-content').value.trim(),
+        sourceRunId: response.runId,
+        evidenceIds
+      })
+    });
+    memoryDialog.close();
+    showToast('候选记忆已提交，等待项目成员确认');
+    await loadMemories();
+    switchTab('memory');
+  } catch (error) {
+    showToast(error.message, true);
+  }
+}
+
+function memoryTypeLabel(type) {
+  return ({
+    DECISION: '决策',
+    CONSTRAINT: '约束',
+    RISK: '风险',
+    OWNER: '负责人',
+    TERM: '术语',
+    EXPERIENCE: '经验'
+  })[type] || type;
+}
+
+function truncateText(value, max) {
+  if (!value) return '';
+  return value.length <= max ? value : value.slice(0, max) + '...';
 }
 
 init();
