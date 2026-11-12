@@ -1,0 +1,7 @@
+package com.jaymrli.teamknowledge.service;
+
+public class NotFoundException extends RuntimeException {
+    public NotFoundException(String message) {
+        super(message);
+    }
+}
