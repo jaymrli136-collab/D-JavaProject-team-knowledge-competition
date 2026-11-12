@@ -25,6 +25,12 @@ public class ApiExceptionHandler {
                 .body(new ApiError("NOT_FOUND", ex.getMessage(), Instant.now()));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> illegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest()
+                .body(new ApiError("INVALID_OPERATION", ex.getMessage(), Instant.now()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> validation(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()
