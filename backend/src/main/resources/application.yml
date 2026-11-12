@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: team-knowledge-competition
+server:
+  port: 8088
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+app:
+  llm:
+    provider: ${LLM_PROVIDER:mock}
+    base-url: ${LLM_BASE_URL:https://api.openai.com/v1}
+    api-key: ${LLM_API_KEY:}
+    model: ${LLM_MODEL:gpt-4.1-mini}
+    temperature: 0.1
+  retrieval:
+    max-evidence: 6
+logging:
+  level:
+    root: INFO
+    com.jaymrli.teamknowledge: DEBUG
