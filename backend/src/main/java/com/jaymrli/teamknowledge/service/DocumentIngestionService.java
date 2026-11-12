@@ -21,15 +21,21 @@ public class DocumentIngestionService {
     private final KnowledgeStore store;
     private final AccessControlService accessControl;
     private final TextAnalyzer analyzer;
+    private final KnowledgeGapService gapService;
+    private final ProjectRoleService roleService;
 
-    public DocumentIngestionService(KnowledgeStore store, AccessControlService accessControl, TextAnalyzer analyzer) {
+    public DocumentIngestionService(KnowledgeStore store, AccessControlService accessControl, TextAnalyzer analyzer,
+                                    KnowledgeGapService gapService, ProjectRoleService roleService) {
         this.store = store;
         this.accessControl = accessControl;
         this.analyzer = analyzer;
+        this.gapService = gapService;
+        this.roleService = roleService;
     }
 
     public KnowledgeDocument ingest(String userId, String projectId, IngestDocumentRequest request) {
         accessControl.requireAccessibleProject(userId, projectId);
+        roleService.requireEditor(userId, projectId);
         List<KnowledgeSection> sections = parseSections(request.content());
         String plain = analyzer.plainText(request.content());
         String summary = plain.length() > 160 ? plain.substring(0, 160) + "..." : plain;
@@ -40,9 +46,10 @@ public class DocumentIngestionService {
                 request.sourceUri().trim(), request.version() == null ? 1 : Math.max(1, request.version()),
                 request.effectiveDate(), request.tags() == null ? Set.of() : Set.copyOf(request.tags()),
                 summary, "文档：" + request.title().trim() + "；章节目录：" + headings,
-                sections, Instant.now()
+                sections, Instant.now(), request.lineageKey()
         );
         store.addDocument(document);
+        gapService.inspectNewDocument(projectId, document.id());
         return document;
     }
 

@@ -4,9 +4,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app")
 public record TeamKnowledgeProperties(Llm llm, Retrieval retrieval) {
-    public record Llm(String provider, String baseUrl, String apiKey, String model, double temperature) {
-    }
+    public record Llm(String provider, String baseUrl, String apiKey, String model, double temperature,
+                      String embeddingModel) {}
 
-    public record Retrieval(int maxEvidence) {
-    }
+    public record Retrieval(int maxEvidence, long maxRunMillis) {}
 }

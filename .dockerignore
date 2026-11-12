@@ -1,0 +1,7 @@
+**/target
+**/.git
+**/.idea
+.local-snapshots
+data
+frontend/node_modules
+*.log

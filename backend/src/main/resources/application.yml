@@ -1,9 +1,16 @@
 spring:
   application:
     name: team-knowledge-competition
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
 server:
   port: 8088
 management:
+  endpoint:
+    health:
+      show-details: always
   endpoints:
     web:
       exposure:
@@ -14,10 +21,17 @@ app:
     base-url: ${LLM_BASE_URL:https://api.openai.com/v1}
     api-key: ${LLM_API_KEY:}
     model: ${LLM_MODEL:gpt-4.1-mini}
+    embedding-model: ${LLM_EMBEDDING_MODEL:text-embedding-3-small}
     temperature: 0.1
   retrieval:
     max-evidence: 6
+    max-run-millis: 15000
+  persistence:
+    state-file: ${WORKSPACE_STATE_FILE:../data/workspace-state.json}
+    save-interval-ms: 5000
 logging:
+  pattern:
+    level: "%5p [%X{requestId:-}]"
   level:
     root: INFO
     com.jaymrli.teamknowledge: DEBUG

@@ -16,6 +16,7 @@
       </div>
     </div>
     <div class="top-actions">
+      <span id="runtime-status" class="runtime-pill">runtime: --</span>
       <label class="user-switch">
         <span>当前身份</span>
         <select id="user-select">
@@ -27,6 +28,9 @@
       <button class="icon-button" id="refresh-button" type="button" title="刷新项目">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
       </button>
+      <button class="icon-button" id="reset-session-button" type="button" title="新会话">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
     </div>
   </header>
 
@@ -37,9 +41,20 @@
           <p class="eyebrow">Knowledge scope</p>
           <h2>项目范围</h2>
         </div>
-        <button class="text-button" id="select-all-button" type="button">全选</button>
+        <div class="head-actions"><button class="text-button" id="select-all-button" type="button">全选</button><button class="text-button" id="create-project-button" type="button">新建</button></div>
       </div>
       <div id="project-list" class="project-list"></div>
+      <section class="health-overview" id="health-overview">
+        <div><strong>--</strong><span>ACTIVE 文档</span></div>
+        <div><strong>--</strong><span>SUPERSEDED 文档</span></div>
+        <div><strong>--</strong><span>ARCHIVED 文档</span></div>
+        <div><strong>--</strong><span>待确认记忆</span></div>
+        <div><strong>--</strong><span>开放缺口</span></div>
+        <div><strong>--</strong><span>最近评测</span></div>
+        <div><strong>--</strong><span>有帮助率</span></div>
+        <div><strong>--</strong><span>反馈数</span></div>
+      </section>
+      <div id="health-warnings" class="health-warnings hidden"></div>
 
       <section class="ingest-section">
         <div class="section-title">
@@ -56,8 +71,14 @@
           <label>来源 URI
             <input id="ingest-source" required value="https://docs.example.com/manual-entry">
           </label>
+          <label>版本谱系（可选）
+            <input id="ingest-lineage" placeholder="例如 tomato-launch">
+          </label>
           <label>生效日期
             <input id="ingest-date" type="date" required>
+          </label>
+          <label>选择 Markdown / 文本 / PDF / DOCX 文件
+            <input id="ingest-file" type="file" accept=".md,.markdown,.txt,.pdf,.docx,text/markdown,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
           </label>
           <label>正文
             <textarea id="ingest-content" required rows="5" placeholder="# 结论&#10;这里填写 Markdown 内容"></textarea>
@@ -94,10 +115,13 @@
         <textarea id="question-input" rows="3" required placeholder="例如：比较番茄小说和红果短剧当前最大的风险"></textarea>
         <div class="composer-actions">
           <span>Enter 发送 · Shift + Enter 换行</span>
-          <button class="primary-button" id="ask-button" type="submit">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-            发送
-          </button>
+          <div class="composer-buttons">
+            <button class="secondary-button" id="preview-button" type="button">预览检索</button>
+            <button class="primary-button" id="ask-button" type="submit">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+              发送
+            </button>
+          </div>
         </div>
       </form>
     </section>
@@ -113,9 +137,16 @@
       <div class="tabbar" role="tablist">
         <button class="tab active" data-tab="evidence" type="button">证据</button>
         <button class="tab" data-tab="trace" type="button">轨迹</button>
+        <button class="tab" data-tab="memory" type="button">记忆</button>
+        <button class="tab" data-tab="gap" type="button">缺口</button>
+        <button class="tab" data-tab="documents" type="button">文档</button>
       </div>
       <div id="evidence-list" class="evidence-list empty-state">提问后在这里查看项目、文档、章节与有效期。</div>
       <div id="trace-list" class="trace-list hidden"></div>
+      <div id="run-history" class="run-history hidden"></div>
+      <div id="memory-list" class="memory-list hidden empty-state">暂无项目记忆。回答完成后可沉淀候选记忆，由项目成员确认。</div>
+      <div id="gap-list" class="memory-list hidden empty-state">暂无知识缺口。证据不足的拒答会自动记录在这里。</div>
+      <div id="document-list" class="memory-list hidden empty-state">暂无文档。</div>
     </aside>
   </main>
 
@@ -133,11 +164,52 @@
     <div class="metrics" id="evaluation-metrics">
       <div><strong>--</strong><span>通过率</span></div>
       <div><strong>--</strong><span>引用覆盖</span></div>
+      <div><strong>--</strong><span>证据召回</span></div>
       <div><strong>--</strong><span>拒答准确率</span></div>
       <div><strong>--</strong><span>权限违规</span></div>
     </div>
+    <div id="evaluation-history" class="evaluation-history empty-state">暂无历史评测。</div>
     <div id="evaluation-cases" class="evaluation-cases empty-state">运行固定任务，验证引用、拒答和权限隔离。</div>
   </section>
+
+  <dialog id="project-dialog" class="memory-dialog">
+    <form id="project-form">
+      <div class="dialog-head"><div><p class="eyebrow">New project</p><h2>创建知识项目</h2></div><button class="icon-button light" id="project-close" type="button" title="关闭"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <label>项目名称<input id="project-name" required maxlength="80"></label>
+      <label>项目说明<input id="project-description" maxlength="160"></label>
+      <label>其他成员（逗号分隔）<input id="project-members" list="user-directory" placeholder="u_bob,u_carol"></label>
+      <datalist id="user-directory"></datalist>
+      <label>导入项目归档（可选）<input id="project-archive-file" type="file" accept=".json,application/json"></label>
+      <div class="dialog-actions"><button class="secondary-button" id="project-cancel" type="button">取消</button><button class="primary-button" type="submit">创建项目</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="section-dialog" class="memory-dialog source-dialog">
+    <div class="dialog-head">
+      <div><p class="eyebrow">Source evidence</p><h2 id="section-title">原文证据</h2></div>
+      <button class="icon-button light" id="section-close" type="button" title="关闭"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div id="section-meta" class="section-meta"></div>
+    <pre id="section-content" class="source-content"></pre>
+  </dialog>
+
+  <dialog id="memory-dialog" class="memory-dialog">
+    <form id="memory-form">
+      <div class="dialog-head">
+        <div><p class="eyebrow">Governed memory</p><h2>沉淀候选记忆</h2></div>
+        <button class="icon-button light" id="memory-close" type="button" title="关闭">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <p class="dialog-note">候选记忆必须绑定本次运行的原文证据。确认前不会进入项目记忆，撤回后也不再作为上下文。</p>
+      <label>项目<select id="memory-project" required></select></label>
+      <label>类型<select id="memory-type" required><option value="DECISION">决策</option><option value="CONSTRAINT">约束</option><option value="RISK">风险</option><option value="OWNER">负责人</option><option value="TERM">术语</option><option value="EXPERIENCE">经验</option></select></label>
+      <label>标题<input id="memory-title" required maxlength="100"></label>
+      <label>内容<textarea id="memory-content" required rows="5"></textarea></label>
+      <div id="memory-evidence" class="memory-evidence"></div>
+      <div class="dialog-actions"><button class="secondary-button" id="memory-cancel" type="button">取消</button><button class="primary-button" type="submit">提交候选记忆</button></div>
+    </form>
+  </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="/app.js"></script>

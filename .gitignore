@@ -1,6 +1,15 @@
 backend/target/
+.m2/
+.tools/
 .idea/
 *.iml
 .vscode/
 *.log
 .DS_Store
+
+.java-parser.mjs
+.isomorphic-git.js
+
+.local-snapshots/
+
+data/

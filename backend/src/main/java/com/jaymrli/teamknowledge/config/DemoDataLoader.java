@@ -35,11 +35,11 @@ public class DemoDataLoader implements ApplicationRunner {
         KnowledgeDocument staleLaunch = ingest("p_tomato", "安卓新版上线计划 v1",
                 "https://docs.example.com/tomato/launch-v1",
                 LocalDate.of(2026, 10, 20), 1, Set.of("上线", "计划"),
-                "# 上线计划\n原计划于12月15日发布安卓新版，并先覆盖10%的新用户。\n\n# 依赖项\n依赖客户端包体优化和内容侧推荐接口联调。");
+                "# 上线计划\n原计划于12月15日发布安卓新版，并先覆盖10%的新用户。\n\n# 依赖项\n依赖客户端包体优化和内容侧推荐接口联调。", "tomato-android-launch");
         KnowledgeDocument launchDecision = ingest("p_tomato", "安卓新版上线调整决策",
                 "https://docs.example.com/tomato/launch-decision",
                 LocalDate.of(2026, 11, 8), 2, Set.of("决策", "上线", "安卓"),
-                "# 决策\n经增长、客户端和运营共同确认，安卓新版上线时间由12月15日提前至12月8日。\n\n# 原因\n11月压测结果稳定，包体优化提前完成，春节前流量窗口需要更早验证留存收益。");
+                "# 决策\n经增长、客户端和运营共同确认，安卓新版上线时间由12月15日提前至12月8日。\n\n# 原因\n11月压测结果稳定，包体优化提前完成，春节前流量窗口需要更早验证留存收益。", "tomato-android-launch");
         KnowledgeDocument tomatoRisk = ingest("p_tomato", "番茄小说十一月风险清单",
                 "https://docs.example.com/tomato/risk-2026-11",
                 LocalDate.of(2026, 11, 10), 1, Set.of("风险", "成本", "内容供给"),
@@ -88,8 +88,13 @@ public class DemoDataLoader implements ApplicationRunner {
 
     private KnowledgeDocument ingest(String projectId, String title, String sourceUri, LocalDate date,
                                        int version, Set<String> tags, String content) {
+        return ingest(projectId, title, sourceUri, date, version, tags, content, null);
+    }
+
+    private KnowledgeDocument ingest(String projectId, String title, String sourceUri, LocalDate date,
+                                       int version, Set<String> tags, String content, String lineageKey) {
         return ingestion.ingest(projectOwner(projectId),
-                projectId, new IngestDocumentRequest(title, content, sourceUri, date, version, tags));
+                projectId, new IngestDocumentRequest(title, content, sourceUri, date, version, tags, lineageKey));
     }
 
     private String projectOwner(String projectId) {

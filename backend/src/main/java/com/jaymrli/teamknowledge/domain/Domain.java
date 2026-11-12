@@ -17,6 +17,30 @@ public final class Domain {
         ANSWERED, ABSTAINED, FORBIDDEN
     }
 
+    public enum MemoryType {
+        DECISION, CONSTRAINT, RISK, OWNER, TERM, EXPERIENCE
+    }
+
+    public enum MemoryStatus {
+        PROPOSED, ACTIVE, RETIRED
+    }
+
+    public enum KnowledgeGapStatus {
+        OPEN, IN_REVIEW, RESOLVED, IGNORED
+    }
+
+    public enum DocumentStatus {
+        ACTIVE, SUPERSEDED, ARCHIVED
+    }
+
+    public enum ProjectRole {
+        OWNER, EDITOR, VIEWER
+    }
+
+    public enum FeedbackRating {
+        HELPFUL, NOT_HELPFUL
+    }
+
     public record Project(
             String id,
             String name,
@@ -50,8 +74,16 @@ public final class Domain {
             String l0Summary,
             String l1Overview,
             List<KnowledgeSection> sections,
-            Instant indexedAt
+            Instant indexedAt,
+            String lineageKey
     ) {
+        public KnowledgeDocument(String id, String projectId, String title, String sourceType,
+                                 String sourceUri, int version, LocalDate effectiveDate, Set<String> tags,
+                                 String l0Summary, String l1Overview, List<KnowledgeSection> sections,
+                                 Instant indexedAt) {
+            this(id, projectId, title, sourceType, sourceUri, version, effectiveDate, tags,
+                    l0Summary, l1Overview, sections, indexedAt, null);
+        }
     }
 
     public record ProjectDecision(
@@ -100,6 +132,77 @@ public final class Domain {
     ) {
     }
 
+    public record RunFeedback(
+            String id,
+            String runId,
+            String userId,
+            FeedbackRating rating,
+            String comment,
+            Instant createdAt
+    ) {
+    }
+
+    public record EvaluationSnapshot(
+            String id,
+            Instant createdAt,
+            int total,
+            int passed,
+            double passRate,
+            double citationCoverage,
+            double evidenceRecall,
+            double abstentionAccuracy,
+            int permissionViolations
+    ) {
+    }
+
+    public record KnowledgeGap(
+            String id,
+            String createdBy,
+            String question,
+            Set<String> projectIds,
+            List<String> sourceRunIds,
+            KnowledgeGapStatus status,
+            int occurrences,
+            Instant createdAt,
+            Instant lastSeenAt,
+            String candidateDocumentId,
+            String resolvedBy,
+            Instant resolvedAt,
+            String resolutionNote
+    ) {
+    }
+
+    public record MemoryHint(
+            String memoryId,
+            String projectId,
+            String projectName,
+            String type,
+            String title,
+            String content,
+            double score,
+            List<String> sourceEvidenceIds
+    ) {
+    }
+
+    public record ProjectMemory(
+            String id,
+            String projectId,
+            MemoryType type,
+            String title,
+            String content,
+            MemoryStatus status,
+            double confidence,
+            String sourceRunId,
+            List<String> sourceEvidenceIds,
+            String createdBy,
+            Instant createdAt,
+            String confirmedBy,
+            Instant confirmedAt,
+            String retiredBy,
+            Instant retiredAt
+    ) {
+    }
+
     public record ToolExecution(
             String toolName,
             String reason,
@@ -115,6 +218,16 @@ public final class Domain {
     ) {
     }
 
+    public record RunMetrics(
+            long total,
+            long answered,
+            long abstained,
+            double averageDurationMs,
+            long p95DurationMs,
+            double averageCitationCoverage
+    ) {
+    }
+
     public record AgentRun(
             String runId,
             String sessionId,
@@ -123,8 +236,10 @@ public final class Domain {
             Plan plan,
             RunStatus status,
             String answer,
+            double citationCoverage,
             List<Evidence> evidence,
             List<String> citationIds,
+            List<MemoryHint> memoryHints,
             List<TraceStep> trace,
             Instant createdAt,
             long durationMs

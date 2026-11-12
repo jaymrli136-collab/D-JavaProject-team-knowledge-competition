@@ -27,35 +27,50 @@ public class HybridRetriever {
             "什么", "多少", "怎么", "为什么", "如何", "当前", "现在", "请问", "一下", "这个", "那个",
             "项目", "时候", "哪些", "是否", "可以", "的", "了", "是", "在", "有", "和", "与"
     );
+    private static final String STOP_CHARS = "的了是在有和与那它怎么什吗呢";
 
     private final KnowledgeStore store;
     private final TextAnalyzer analyzer;
+    private final EmbeddingService embeddingService;
 
-    public HybridRetriever(KnowledgeStore store, TextAnalyzer analyzer) {
+    public HybridRetriever(KnowledgeStore store, TextAnalyzer analyzer, EmbeddingService embeddingService) {
         this.store = store;
         this.analyzer = analyzer;
+        this.embeddingService = embeddingService;
     }
 
     public List<Evidence> retrieve(String query, Set<String> projectIds, Intent intent, int limit) {
-        List<KnowledgeDocument> documents = store.documentsForProjects(projectIds);
+        List<KnowledgeDocument> documents = store.activeDocumentsForProjects(projectIds);
         if (documents.isEmpty()) return List.of();
 
-        List<Candidate> candidates = new ArrayList<>();
+        List<CandidateSource> sources = new ArrayList<>();
+        List<String> searchableTexts = new ArrayList<>();
         for (KnowledgeDocument document : documents) {
             Project project = store.findProject(document.projectId()).orElseThrow();
             for (KnowledgeSection section : document.sections()) {
                 String searchable = document.title() + " " + document.l0Summary() + " " + document.l1Overview()
                         + " " + section.headingPath() + " " + section.content();
-                candidates.add(new Candidate(project, document, section,
-                        analyzer.termFrequency(searchable), analyzer.tokenize(searchable).size(),
-                        analyzer.vectorize(searchable)));
+                sources.add(new CandidateSource(project, document, section, searchable));
+                searchableTexts.add(searchable);
             }
+        }
+        List<double[]> vectors = embeddingService.embedBatch(searchableTexts);
+        List<Candidate> candidates = new ArrayList<>();
+        for (int i = 0; i < sources.size(); i++) {
+            CandidateSource source = sources.get(i);
+            candidates.add(new Candidate(source.project(), source.document(), source.section(),
+                    analyzer.termFrequency(source.searchable()), analyzer.tokenize(source.searchable()).size(),
+                    vectors.get(i)));
         }
 
         String expandedQuery = query + " " + intentTerms(intent);
         List<String> queryTokens = analyzer.tokenize(expandedQuery).stream().distinct().toList();
         if (queryTokens.isEmpty()) return List.of();
         List<String> anchorTokens = analyzer.tokenize(query).stream().distinct().filter(this::isAnchorToken).toList();
+        Set<String> projectTokens = documents.stream()
+                .map(document -> store.findProject(document.projectId()).orElseThrow().name())
+                .flatMap(name -> analyzer.tokenize(name).stream())
+                .collect(java.util.stream.Collectors.toSet());
 
         double averageLength = candidates.stream().mapToInt(Candidate::length).average().orElse(1.0);
         Map<String, Integer> documentFrequency = new HashMap<>();
@@ -67,10 +82,10 @@ public class HybridRetriever {
             documentFrequency.put(token, frequency);
         }
 
-        double[] queryVector = analyzer.vectorize(expandedQuery);
+        double[] queryVector = embeddingService.embed(expandedQuery);
         List<ScoredCandidate> scored = new ArrayList<>();
         for (Candidate candidate : candidates) {
-            if (!anchorTokens.isEmpty() && !containsAnchor(candidate, anchorTokens)) continue;
+            if (!anchorTokens.isEmpty() && !containsAnchor(candidate, anchorTokens, projectTokens)) continue;
             double bm25 = bm25(candidate, queryTokens, documentFrequency, averageLength, candidates.size());
             double vector = analyzer.cosine(queryVector, candidate.vector());
             double bonus = rerankBonus(query, candidate);
@@ -151,19 +166,23 @@ public class HybridRetriever {
 
     private boolean isAnchorToken(String token) {
         if (STOP_TOKENS.contains(token)) return false;
+        if (token.codePoints().anyMatch(code -> STOP_CHARS.indexOf(code) >= 0)) return false;
         return token.length() > 1 || token.codePoints().allMatch(code -> code < 128);
     }
 
-    private boolean containsAnchor(Candidate candidate, List<String> anchorTokens) {
-        Set<String> projectTokens = Set.copyOf(analyzer.tokenize(candidate.project().name()));
+    private boolean containsAnchor(Candidate candidate, List<String> anchorTokens, Set<String> projectTokens) {
         List<String> contentAnchors = anchorTokens.stream()
                 .filter(token -> !projectTokens.contains(token))
                 .toList();
         if (contentAnchors.isEmpty()) return true;
-        return contentAnchors.stream().anyMatch(candidate.termFrequency()::containsKey);
+        long matched = contentAnchors.stream().filter(candidate.termFrequency()::containsKey).count();
+        return matched >= Math.max(1, Math.ceil(contentAnchors.size() * 0.35));
     }
 
     private double round(double value) { return Math.round(value * 10000.0) / 10000.0; }
+
+    private record CandidateSource(Project project, KnowledgeDocument document, KnowledgeSection section,
+                                   String searchable) {}
 
     private record Candidate(Project project, KnowledgeDocument document, KnowledgeSection section,
                              Map<String, Integer> termFrequency, int length, double[] vector) {}

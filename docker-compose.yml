@@ -1,0 +1,17 @@
+services:
+  team-knowledge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8088:8088"
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4.1-mini}
+      LLM_EMBEDDING_MODEL: ${LLM_EMBEDDING_MODEL:-text-embedding-3-small}
+      WORKSPACE_STATE_FILE: /app/data/workspace-state.json
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
