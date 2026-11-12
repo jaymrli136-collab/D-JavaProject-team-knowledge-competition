@@ -211,3 +211,23 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent); box-sha
   .top-actions { gap: 6px; }
   .user-switch select { max-width: 150px; }
 }
+
+.memory-list { display: grid; gap: 9px; max-height: calc(100vh - 230px); overflow: auto; }
+.memory-card { border: 1px solid var(--line); border-radius: 7px; padding: 11px; background: var(--surface-soft); }
+.memory-card header { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.memory-card h4 { margin: 0; font-size: 12px; }
+.memory-card p { margin: 6px 0; color: #45595e; font-size: 11px; white-space: pre-wrap; }
+.memory-actions { display: flex; gap: 6px; margin-top: 8px; }
+.small-button { border: 1px solid #bdcbc8; border-radius: 5px; background: #fff; color: var(--ink); padding: 4px 8px; font-size: 10px; }
+.small-button:hover { border-color: var(--accent); color: var(--accent); }
+.small-button.danger:hover { border-color: var(--danger); color: var(--danger); }
+.memory-dialog { width: min(560px, calc(100vw - 28px)); border: 0; border-radius: 9px; box-shadow: 0 24px 70px rgba(15,35,41,.25); padding: 0; color: var(--ink); }
+.memory-dialog::backdrop { background: rgba(10,27,32,.42); }
+.memory-dialog form { padding: 20px; display: grid; gap: 10px; }
+.memory-dialog label { display: grid; gap: 4px; color: var(--muted); font-size: 11px; }
+.dialog-head { display: flex; justify-content: space-between; align-items: flex-start; }
+.dialog-note { color: var(--muted); background: var(--surface-soft); border: 1px solid var(--line); border-radius: 6px; padding: 9px; font-size: 11px; margin: 0; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.icon-button.light { color: var(--muted); border-color: var(--line); }
+.memory-evidence { display: flex; flex-wrap: wrap; gap: 5px; }
+.memory-evidence span { background: var(--accent-soft); color: var(--accent-dark); border-radius: 4px; padding: 2px 6px; font-size: 10px; }
